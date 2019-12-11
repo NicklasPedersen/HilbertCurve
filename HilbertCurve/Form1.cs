@@ -13,17 +13,6 @@ namespace HilbertCurve
 {
     public partial class Form1 : Form
     {
-        private static Vector2[] qed = new Vector2[0];
-        private  static  Vector2[] first = new Vector2[0];
-        private static Vector2[] second = new Vector2[0];
-        private static bool RGB;
-        private static bool Rainbow = false;
-        private static bool BetterRainbow = false;
-        private static int thickness = 0;
-        private static int offset = 0;
-        private static int spacing = 0;
-        private static Color[] FirstColors = new Color[0];
-        private static Color[] SecondColors = new Color[0];
         public Form1()
         {
             InitializeComponent();
@@ -31,55 +20,44 @@ namespace HilbertCurve
 
         private void button1_Click(object sender, EventArgs e)
         {
-            int amountOfThreads = trackBar3.Value;
             Refresh();
-            Vector2.Change = 1;
-            Stopwatch s = Stopwatch.StartNew();
-            qed = Vector2.IterateBuildCurve(trackBar4.Value);
-            textBox6.Text = s.Elapsed.ToString();
+            Stopwatch timer = Stopwatch.StartNew();
+            Vector2[] curve = Vector2.IterateBuildCurve(trackBar4.Value);
+            textBox6.Text = timer.Elapsed.ToString();
             
-            thickness = trackBar2.Value;
-            offset = thickness;
-            spacing = trackBar1.Value * thickness * thickness;
-            first = Vector2.SubArray(qed, 0, qed.Length / 2+1);
-            second = Vector2.SubArray(qed, qed.Length / 2, qed.Length / 2);
-            RGB = RGBButton.Checked;
-            Rainbow = RainbowButton.Checked;
-            BetterRainbow = OtherRainbowButton.Checked;
-            s.Restart();
-            if (qed.Length == 1)
+            int thickness = trackBar2.Value;
+            int spacing = trackBar1.Value * thickness * thickness;
+            timer.Restart();
+            if (curve.Length == 1)
             {
                 CreateGraphics().FillRectangle(new SolidBrush(Color.Red),thickness,thickness,thickness,thickness);
-                textBox4.Text = s.Elapsed.ToString();
+                textBox4.Text = timer.Elapsed.ToString();
                 return;
             }
-            Color[] colors = new Color[qed.Length];
-            FirstColors = new Color[qed.Length/2+1];
-            SecondColors = new Color[qed.Length/2];
-            for (int i = 0; i < qed.Length; i++)
+            Color[] colors = new Color[curve.Length];
+            for (int i = 0; i < curve.Length; i++)
             {
                 int a = 255;
                 int b = 0;
                 int c = 0;
-                if (RGB) Clamp(ref a, ref b, ref c, i, 255, qed.Length - 2);
-                else if (Rainbow) ClampDiff(ref a, ref b, ref c, i, 255, qed.Length - 2);
-                else if (BetterRainbow) ClampDiffAgain(ref a, ref b, ref c, i, 255, qed.Length - 2);
+                if (RGBButton.Checked) Clamp(ref a, ref b, ref c, i, 255, curve.Length - 2);
+                else if (RainbowButton.Checked) ClampDiff(ref a, ref b, ref c, i, 255, curve.Length - 2);
+                else if (OtherRainbowButton.Checked) ClampDiffAgain(ref a, ref b, ref c, i, 255, curve.Length - 2);
                 
                 colors[i] = Color.FromArgb(255, a, b, c);
             }
 
-            Thread[] threads;
-            if (qed.Length<amountOfThreads) threads = new Thread[qed.Length];
-            else threads = new Thread[amountOfThreads];
+            int amountOfThreads = trackBar3.Value;
+            Thread[] threads = new Thread[curve.Length < amountOfThreads ? curve.Length : amountOfThreads];
             Graphics[] graphics = new Graphics[threads.Length];
             for(int i = 0; i < graphics.Length; i++) graphics[i] = CreateGraphics();
-            threads[0] = new Thread(() => Threading(graphics[0], SubArray(colors, 0, qed.Length/threads.Length), Vector2.SubArray(qed, 0, qed.Length / threads.Length)));
+            threads[0] = new Thread(() => Threading(graphics[0], SubArray(colors, 0, curve.Length/threads.Length), Vector2.SubArray(curve, 0, curve.Length / threads.Length), thickness, spacing));
             for (int i = 1; i < threads.Length; i++)
             {
-                Color[] col = SubArray(colors, i * qed.Length / threads.Length - 1, qed.Length / threads.Length + 1);
-                Vector2[] vec = Vector2.SubArray(qed, i * qed.Length / threads.Length - 1,
-                    qed.Length / threads.Length + 1);
-                threads[i] = new Thread(() => Threading(CreateGraphics(), col, vec)); 
+                Color[] col = SubArray(colors, i * curve.Length / threads.Length - 1, curve.Length / threads.Length + 1);
+                Vector2[] vec = Vector2.SubArray(curve, i * curve.Length / threads.Length - 1,
+                    curve.Length / threads.Length + 1);
+                threads[i] = new Thread(() => Threading(CreateGraphics(), col, vec, thickness, spacing)); 
                 
             }
 
@@ -93,17 +71,17 @@ namespace HilbertCurve
                 thread.Join();
             }
 
-            textBox4.Text = s.Elapsed.ToString();
+            textBox4.Text = timer.Elapsed.ToString();
         }
 
-        private static void Threading(Graphics g, Color[] colors, Vector2[] points)
+        private static void Threading(Graphics g, Color[] colors, Vector2[] points, int thickness, int spacing)
         {
             for (int i = 0; i < points.Length-1; i++)
             {
                 Vector2 fir = points[i];
                 Vector2 sec = points[i + 1];
-                g.DrawLine(new Pen(colors[i], thickness), fir[0] * spacing + offset, fir[1] * spacing + offset,
-                    sec[0] * spacing + offset, sec[1] * spacing + offset);
+                g.DrawLine(new Pen(colors[i], thickness), fir[0] * spacing + thickness, fir[1] * spacing + thickness,
+                    sec[0] * spacing + thickness, sec[1] * spacing + thickness);
             }
         }
 
@@ -112,30 +90,6 @@ namespace HilbertCurve
             Color[] result = new Color[length];
             Array.Copy(data, index, result, 0, length);
             return result;
-        }
-        private static void FirstHalf(Graphics g)
-        {
-            for (int i = 0; i < first.Length - 1; i++)
-            {
-                Vector2 fir = first[i];
-                Vector2 sec = first[i + 1];
-                g.DrawLine(new Pen(FirstColors[i], thickness), fir[0] * spacing + offset, fir[1] * spacing + offset,
-                    sec[0] * spacing + offset, sec[1] * spacing + offset);
-            }
-        }
-
-        private static void SecondHalf(Graphics g)
-        {
-            for (int i = second.Length-1; i > 0 ; i--)
-            {
-                Vector2 fir = second[i];
-                Vector2 sec = second[i - 1];
-                g.DrawLine(new Pen(SecondColors[i], thickness), fir[0] * spacing + offset,
-                        fir[1] * spacing + offset,
-                        sec[0] * spacing + offset, sec[1] * spacing + offset);
-                
-                
-            }
         }
         private static void ClampDiffAgain(ref int first, ref int second, ref int third, int input, int clamped, int max)
         {
@@ -150,8 +104,6 @@ namespace HilbertCurve
                 second = clamped;
                 first = Clamp(max-(input-max/3)*6, clamped, max);
                 third = 0;
-                if (input + 1 >= max / 2)
-                    input++;
             }
             else if(input < max / 3 * 2)
             {

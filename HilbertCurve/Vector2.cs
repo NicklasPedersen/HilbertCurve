@@ -4,21 +4,24 @@ namespace HilbertCurve
 {
     class Vector2
     {
-        public static int Change = 1;
+        public int change;
         public int[] Pos;
 
-        public Vector2()
+        public Vector2(int change = 1)
         {
+            this.change = change;
             Pos = new[] { 0, 0 };
         }
 
-        public Vector2(int x, int y)
+        public Vector2(int x, int y, int change = 1)
         {
+            this.change = change;
             Pos = new[] { x, y };
         }
 
-        public Vector2(Vector2 vector2)
+        public Vector2(Vector2 vector2, int change = 1)
         {
+            this.change = change;
             Pos = new[] { vector2[0], vector2[1] };
         }
 
@@ -35,13 +38,15 @@ namespace HilbertCurve
             return newVector1D;
         }
 
-        public static Vector2[] IterateBuildCurve(int times)
+        // Iterately builds a curve
+        public static Vector2[] IterateBuildCurve(int times, int change = 1)
         {
-            Vector2[] start = { new Vector2() };
+            Vector2[] start = { new Vector2(change) };
             for (int i = 0; i < times; i++) start = BuildCurve(start);
             return start;
         }
 
+        // Builds a curve up to the next layer
         public static Vector2[] BuildCurve(Vector2[] input)
         {
             Vector2[] first = RotateX(NewVector2v21D(input));
@@ -49,13 +54,14 @@ namespace HilbertCurve
             Vector2[] third = NewVector2v21D(input);
             Vector2[] fourth = RotateXY(NewVector2v21D(input));
             int length = (int)Math.Sqrt(input.Length);
-            // This makes
-            second = Add(second, 0, Change * length);
-            third = Add(third, Change * length, Change * length);
-            fourth = Add(fourth, Change * length, 0);
+            // This makes the actual curve
+            second = Add(second, 0, input[0].change * length);
+            third = Add(third, input[0].change * length, input[0].change * length);
+            fourth = Add(fourth, input[0].change * length, 0);
             return Add(first, Add(second, Add(third, fourth)));
         }
 
+        // Does a matrix rotation of a Vector2 array
         public static Vector2[] RotateX(Vector2[] input)
         {
             int length = input.GetLength(0);
@@ -74,6 +80,7 @@ namespace HilbertCurve
             return Add(first, Add(second, Add(third, fourth)));
         }
 
+        // Does a matrix rotation of a Vector2 array
         public static Vector2[] RotateXY(Vector2[] input)
         {
             int length = input.GetLength(0);
@@ -92,6 +99,7 @@ namespace HilbertCurve
             return Add(first, Add(second, Add(third, fourth)));
         }
 
+        // Adds an offset to all elements in a Vector2 array
         public static Vector2[] Add(Vector2[] input, int x, int y)
         {
             Vector2[] newVector2 = new Vector2[input.GetLength(0)];
@@ -99,11 +107,13 @@ namespace HilbertCurve
             return newVector2;
         }
 
+        // Adds an offset to a Vector2 object
         public static Vector2 Add(Vector2 input, int x, int y)
         {
             return new Vector2(input[0] + x, input[1] + y);
         }
 
+        // Allocates a new Vector2 array and appends the left and right to it
         public static Vector2[] Add(Vector2[] left, Vector2[] right)
         {
             Vector2[] output = new Vector2[left.GetLength(0) + right.GetLength(0)];
@@ -116,6 +126,7 @@ namespace HilbertCurve
             return output;
         }
 
+        // Returns new array based on the index and length arguments
         public static Vector2[] SubArray(Vector2[] data, int index, int length)
         {
             Vector2[] result = new Vector2[length];
